@@ -2,7 +2,7 @@ const axios = require('axios');
 const cache = require('./cache');
 
 const API_URL = 'https://api.binance.com/api/v3/ticker/price';
-const TIMEOUT_MS = 3000;
+const TIMEOUT_MS = 5000;
 
 const PAIRS = [
   { pairSymbol: 'BTCUSDT', symbol: 'BTC' },
@@ -36,7 +36,7 @@ async function fetchPrices() {
     response = await axios.get(API_URL, { timeout: TIMEOUT_MS });
   } catch (err) {
     if (err.code === 'ECONNABORTED') {
-      throw new Error('Binance REST API request timed out after 3000ms');
+      throw new Error('Binance REST API request timed out after 5000ms');
     }
     if (err.response) {
       throw new Error(`Binance REST API error: HTTP ${err.response.status}`);

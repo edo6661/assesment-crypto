@@ -821,7 +821,7 @@
 
           get isLiveMode() {
             return (
-              this.wsConnected && this.healthOkCount === 3 && !this.restMock
+              this.wsConnected && this.healthOkCount > 0 && !this.restMock
             );
           },
 

@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    container_name: crypto-dashboard-app
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Jakarta
+      - PORT=3000
+    networks:
+      - proxy-network
+
+networks:
+  proxy-network:
+    external: true

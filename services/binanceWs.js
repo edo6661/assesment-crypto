@@ -168,6 +168,7 @@ function connect() {
 function startWs() {
   if (started) return;
   started = true;
+  injectMockTicks();
   connect();
 }
 

@@ -2,7 +2,7 @@ const axios = require('axios');
 const cache = require('./cache');
 
 const API_URL = 'https://api.coincap.io/v2/assets';
-const TIMEOUT_MS = 3000;
+const TIMEOUT_MS = 5000;
 
 const SYMBOLS = ['BTC', 'ETH', 'SOL'];
 
@@ -30,7 +30,7 @@ async function fetchPrices() {
     response = await axios.get(API_URL, { timeout: TIMEOUT_MS });
   } catch (err) {
     if (err.code === 'ECONNABORTED') {
-      throw new Error('CoinCap API request timed out after 3000ms');
+      throw new Error('CoinCap API request timed out after 5000ms');
     }
     if (err.response) {
       throw new Error(`CoinCap API error: HTTP ${err.response.status}`);
