@@ -1,0 +1,1293 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crypto Dashboard</title>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0f1117;
+        --card: #1a1d27;
+        --card-border: #2a2f3d;
+        --text: #e8eaef;
+        --text-muted: #8b92a5;
+        --accent: #3b82f6;
+        --accent-hover: #2563eb;
+        --success: #22c55e;
+        --danger: #ef4444;
+        --radius: 10px;
+        --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      }
+
+      [x-cloak] {
+        display: none !important;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, "Helvetica Neue", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.5;
+      }
+
+      .app {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 1.25rem 1.5rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        min-height: 100vh;
+      }
+
+      /* Header */
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--card-border);
+      }
+
+      .header__title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .header__right {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+      }
+
+      .header__status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+      }
+
+      .badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .badge--live {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+        border: 1px solid rgba(34, 197, 94, 0.35);
+      }
+
+      .badge--mock {
+        background: rgba(234, 179, 8, 0.12);
+        color: #eab308;
+        border: 1px solid rgba(234, 179, 8, 0.35);
+      }
+
+      .badge--blocked {
+        background: rgba(239, 68, 68, 0.12);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+      }
+
+      .network-banner {
+        padding: 0.85rem 1rem;
+        border-radius: var(--radius);
+        background: rgba(234, 179, 8, 0.08);
+        border: 1px solid rgba(234, 179, 8, 0.35);
+        font-size: 0.85rem;
+        color: #d4d4d8;
+        line-height: 1.55;
+      }
+
+      .network-banner strong {
+        color: #eab308;
+      }
+
+      .network-banner code {
+        font-size: 0.8rem;
+        background: var(--bg);
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+      }
+
+      .ws-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .ws-dot--connected {
+        background: var(--success);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+        animation: pulse-green 1.5s ease-in-out infinite;
+      }
+
+      .ws-dot--disconnected {
+        background: var(--danger);
+      }
+
+      @keyframes pulse-green {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+        }
+        50% {
+          box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+        }
+      }
+
+      /* Cards */
+      .card {
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+
+      .section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        margin-bottom: 0.75rem;
+      }
+
+      /* Section 1: Summary grid */
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+      }
+
+      .summary-card {
+        padding: 1.25rem;
+        min-height: 100px;
+      }
+
+      .summary-card__label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 0.35rem;
+      }
+
+      .summary-card__value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--accent);
+        transition: color 0.35s ease;
+      }
+
+      .summary-card__sublabel {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-top: 0.4rem;
+      }
+
+      .summary-card__status {
+        font-size: 0.72rem;
+        margin-top: 0.4rem;
+        font-weight: 600;
+      }
+
+      .status-connected {
+        color: #22c55e;
+      }
+
+      .status-disconnected {
+        color: #ef4444;
+      }
+
+      .value-success {
+        color: #22c55e !important;
+      }
+
+      .value-warning {
+        color: #eab308 !important;
+      }
+
+      .value-danger {
+        color: #ef4444 !important;
+      }
+
+      .price-up {
+        color: #22c55e !important;
+        transition: color 0.35s ease;
+      }
+
+      .price-down {
+        color: #ef4444 !important;
+        transition: color 0.35s ease;
+      }
+
+      /* Toasts */
+      .toast-container {
+        position: fixed;
+        bottom: 1.25rem;
+        right: 1.25rem;
+        z-index: 200;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        max-width: 320px;
+      }
+
+      .toast {
+        padding: 0.75rem 1rem;
+        background: #1a1d27;
+        border: 1px solid #ef4444;
+        border-radius: 8px;
+        color: #e8eaef;
+        font-size: 0.875rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        animation: toast-in 0.25s ease;
+      }
+
+      @keyframes toast-in {
+        from {
+          opacity: 0;
+          transform: translateX(1rem);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .btn {
+        padding: 0.5rem 0.85rem;
+        border-radius: 6px;
+        border: 1px solid var(--card-border);
+        background: var(--accent);
+        color: #fff;
+        font-size: 0.875rem;
+        cursor: pointer;
+      }
+
+      .btn:hover {
+        background: var(--accent-hover);
+      }
+
+      .btn--ghost {
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .btn--ghost:hover {
+        background: var(--card-border);
+      }
+
+      .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .table-pagination {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+      }
+
+      .loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 17, 23, 0.65);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+      }
+
+      .placeholder {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-style: italic;
+      }
+
+      /* Section 2: Charts */
+      .charts-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .chart-card {
+        padding: 1.25rem;
+        min-height: 320px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .chart-card__canvas-wrap {
+        flex: 1;
+        position: relative;
+        min-height: 240px;
+        margin-top: 0.5rem;
+      }
+
+      .chart-card__canvas-wrap canvas {
+        max-height: 280px;
+      }
+
+      /* Section 3: Table */
+      .table-section {
+        padding: 1.25rem;
+      }
+
+      .table-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      .table-toolbar__search {
+        flex: 1;
+        min-width: 180px;
+        max-width: 280px;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid var(--card-border);
+        background: var(--bg);
+        color: var(--text);
+        font-size: 0.875rem;
+      }
+
+      .table-toolbar__search:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+
+      .table-toolbar__filter,
+      .table-toolbar__pagination {
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid var(--card-border);
+        background: var(--bg);
+        color: var(--text);
+        font-size: 0.875rem;
+        cursor: pointer;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: 6px;
+        border: 1px solid var(--card-border);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+      }
+
+      thead {
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      th,
+      td {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--card-border);
+      }
+
+      th {
+        font-weight: 600;
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      tbody tr:hover {
+        background: rgba(59, 130, 246, 0.05);
+      }
+
+      /* Footer */
+      .footer {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid var(--card-border);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+
+      /* Tablet: 768px */
+      @media (max-width: 768px) {
+        .app {
+          padding: 1rem;
+        }
+
+        .summary-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .charts-row {
+          grid-template-columns: 1fr;
+        }
+
+        .chart-card {
+          min-height: 280px;
+        }
+
+        .table-toolbar__search {
+          max-width: none;
+          flex: 1 1 100%;
+        }
+      }
+
+      /* Mobile */
+      @media (max-width: 480px) {
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .header__title {
+          font-size: 1.25rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app" x-data="dashboard()" x-init="init()">
+      <div class="loading-overlay" x-show="loading" x-cloak>
+        Loading dashboard…
+      </div>
+      <!-- Header -->
+      <header class="header">
+        <h1 class="header__title">Crypto Dashboard</h1>
+        <div class="header__right">
+          <span
+            class="badge"
+            :class="isLiveMode ? 'badge--live' : 'badge--mock'"
+            x-text="isLiveMode ? 'Live Data' : 'Mock / Offline'"
+          ></span>
+          <span class="badge badge--blocked" x-show="networkBlocked" x-cloak
+            >Network Blocked</span
+          >
+          <div class="header__status">
+            <span
+              class="ws-dot"
+              :class="wsConnected ? 'ws-dot--connected' : 'ws-dot--disconnected'"
+            ></span>
+            <span x-text="wsStatusLabel"></span>
+          </div>
+        </div>
+      </header>
+
+      <div class="network-banner" x-show="networkBlocked || restMock" x-cloak>
+        <template x-if="networkBlocked">
+          <p>
+            <strong>API diblokir jaringan</strong> (sertifikat
+            <code>internetpositif.id</code> / ISP filter). REST &amp; WebSocket
+            Binance WS tidak bisa diakses dari jaringan ini. Gunakan
+            <strong>VPN</strong> atau DNS (1.1.1.1 / 8.8.8.8), lalu refresh.
+            Dashboard memakai <strong>data mock</strong> agar tetap bisa
+            dikembangkan.
+          </p>
+        </template>
+        <template x-if="!networkBlocked && restMock">
+          <p>
+            <strong>REST sources unavailable</strong> — menampilkan harga mock
+            dari aggregator. WebSocket:
+            <span x-text="wsConnected ? 'terhubung' : 'mock ticks aktif'"></span
+            >.
+          </p>
+        </template>
+      </div>
+
+      <!-- Section 1: Summary cards -->
+      <section aria-labelledby="summary-heading">
+        <h2 id="summary-heading" class="section-title">Overview</h2>
+        <div class="summary-grid">
+          <div class="card summary-card">
+            <p class="summary-card__label">Bitcoin (BTC)</p>
+            <p
+              class="summary-card__value"
+              :class="priceClass('BTC')"
+              x-text="formatUsd(prices.BTC?.price)"
+            ></p>
+            <p class="summary-card__sublabel" x-text="wsPriceSublabel"></p>
+          </div>
+          <div class="card summary-card">
+            <p class="summary-card__label">Ethereum (ETH)</p>
+            <p
+              class="summary-card__value"
+              :class="priceClass('ETH')"
+              x-text="formatUsd(prices.ETH?.price)"
+            ></p>
+            <p class="summary-card__sublabel" x-text="wsPriceSublabel"></p>
+          </div>
+          <div class="card summary-card">
+            <p class="summary-card__label">Solana (SOL)</p>
+            <p
+              class="summary-card__value"
+              :class="priceClass('SOL')"
+              x-text="formatUsd(prices.SOL?.price)"
+            ></p>
+            <p class="summary-card__sublabel" x-text="wsPriceSublabel"></p>
+          </div>
+          <div class="card summary-card">
+            <p class="summary-card__label">BTC Spread</p>
+            <p
+              class="summary-card__value"
+              :class="spreadValueClass()"
+              x-text="formatSpreadPct()"
+            ></p>
+            <p
+              class="summary-card__sublabel"
+              x-text="restMock ? 'Mock sources (no spread)' : 'Across all sources'"
+            ></p>
+          </div>
+          <div class="card summary-card">
+            <p class="summary-card__label">Sources Online</p>
+            <p
+              class="summary-card__value"
+              :class="sourcesHealthValueClass()"
+              x-text="healthOkCount + ' / 3'"
+            ></p>
+            <p
+              class="summary-card__sublabel"
+              x-text="networkBlocked ? 'Blocked by network' : 'REST API health'"
+            ></p>
+          </div>
+          <div class="card summary-card">
+            <p class="summary-card__label">WS Reconnects</p>
+            <p class="summary-card__value" x-text="wsReconnectAttempts"></p>
+            <p
+              class="summary-card__status"
+              :class="wsConnected ? 'status-connected' : 'status-disconnected'"
+              x-text="wsConnected ? 'Binance WS connected' : (wsMock ? 'Mock ticks' : 'Disconnected')"
+            ></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Charts -->
+      <section aria-labelledby="charts-heading">
+        <h2 id="charts-heading" class="section-title">Charts</h2>
+        <div class="charts-row">
+          <div class="card chart-card">
+            <p class="summary-card__label">Price History (5 min)</p>
+            <div class="chart-card__canvas-wrap">
+              <canvas id="lineChart"></canvas>
+            </div>
+          </div>
+          <div class="card chart-card">
+            <p class="summary-card__label">BTC by Source</p>
+            <div class="chart-card__canvas-wrap">
+              <canvas id="barChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Table -->
+      <section aria-labelledby="table-heading">
+        <h2 id="table-heading" class="section-title">Market Data</h2>
+        <div class="card table-section">
+          <div class="table-toolbar">
+            <input
+              type="search"
+              class="table-toolbar__search"
+              placeholder="Search timestamp..."
+              aria-label="Search"
+              x-model="tableSearch"
+              @input="tablePage = 1"
+            />
+            <select
+              class="table-toolbar__filter"
+              aria-label="Filter by symbol"
+              x-model="tableSymbol"
+              @change="fetchAll()"
+            >
+              <option value="BTC">BTC</option>
+              <option value="ETH">ETH</option>
+              <option value="SOL">SOL</option>
+            </select>
+            <select
+              class="table-toolbar__filter"
+              aria-label="Filter by duration"
+              x-model="tableDuration"
+              @change="fetchAll()"
+            >
+              <option value="60">60 seconds</option>
+              <option value="300">300 seconds</option>
+            </select>
+            <select
+              class="table-toolbar__pagination"
+              aria-label="Rows per page"
+              x-model.number="tablePageSize"
+              @change="tablePage = 1"
+            >
+              <option :value="20">20 per page</option>
+              <option :value="50">50 per page</option>
+              <option :value="100">100 per page</option>
+              <option :value="200">200 per page</option>
+            </select>
+            <button type="button" class="btn" @click="exportCSV()">
+              Export CSV
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    <button
+                      type="button"
+                      class="btn--ghost"
+                      style="
+                        border: none;
+                        background: none;
+                        padding: 0;
+                        color: inherit;
+                        cursor: pointer;
+                      "
+                      @click="toggleSort('timestamp')"
+                    >
+                      Timestamp
+                      <span x-text="sortIndicator('timestamp')"></span>
+                    </button>
+                  </th>
+                  <th>
+                    <button
+                      type="button"
+                      class="btn--ghost"
+                      style="
+                        border: none;
+                        background: none;
+                        padding: 0;
+                        color: inherit;
+                        cursor: pointer;
+                      "
+                      @click="toggleSort('price')"
+                    >
+                      Price <span x-text="sortIndicator('price')"></span>
+                    </button>
+                  </th>
+                  <th>Symbol</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-if="paginatedHistory.length === 0">
+                  <tr>
+                    <td
+                      colspan="3"
+                      class="placeholder"
+                      style="text-align: center; padding: 2rem"
+                    >
+                      No history data
+                    </td>
+                  </tr>
+                </template>
+                <template
+                  x-for="(row, index) in paginatedHistory"
+                  :key="row.timestamp + '-' + index"
+                >
+                  <tr>
+                    <td x-text="formatTimestamp(row.timestamp)"></td>
+                    <td x-text="formatPrice(row.price)"></td>
+                    <td x-text="tableSymbol"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-pagination">
+            <button
+              type="button"
+              class="btn btn--ghost"
+              :disabled="tablePage <= 1"
+              @click="tablePage--"
+            >
+              Prev
+            </button>
+            <span x-text="'Page ' + tablePage + ' of ' + totalPages"></span>
+            <button
+              type="button"
+              class="btn btn--ghost"
+              :disabled="tablePage >= totalPages"
+              @click="tablePage++"
+            >
+              Next
+            </button>
+            <span x-text="filteredHistory.length + ' rows'"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <span>Last updated: <span x-text="lastUpdated || '—'"></span></span>
+        <span>Auto-refresh in: <span x-text="countdown"></span>s</span>
+      </footer>
+
+      <!-- Toasts -->
+      <div class="toast-container" aria-live="polite">
+        <template x-for="toast in toasts" :key="toast.id">
+          <div class="toast" x-text="toast.message"></div>
+        </template>
+      </div>
+    </div>
+
+    <script>
+      function dashboard() {
+        let lineChart = null;
+        let barChart = null;
+
+        return {
+          wsConnected: false,
+          wsReconnectAttempts: 0,
+
+          prices: { BTC: null, ETH: null, SOL: null },
+          prevPrices: { BTC: null, ETH: null, SOL: null },
+
+          aggregate: { BTC: null, ETH: null, SOL: null },
+          sources: [],
+          health: {},
+
+          history: [],
+          chartHistories: { BTC: [], ETH: [], SOL: [] },
+          tableSearch: "",
+          tableSymbol: "BTC",
+          tableDuration: "300",
+          tablePageSize: 20,
+          tablePage: 1,
+          tableSort: { key: "timestamp", dir: "desc" },
+
+          lastUpdated: null,
+          countdown: 30,
+          loading: true,
+          toasts: [],
+          restMock: false,
+          networkBlocked: false,
+
+          _refreshTimer: null,
+          _countdownTimer: null,
+          _priceTimers: { BTC: null, ETH: null, SOL: null },
+          _toastedHealth: {},
+
+          get healthOkCount() {
+            const keys = ["coingecko", "coincap", "binance"];
+            return keys.filter((k) => this.health[k]?.status === "ok").length;
+          },
+
+          get wsMock() {
+            return !this.wsConnected && this.prices.BTC != null;
+          },
+
+          get isLiveMode() {
+            return (
+              this.wsConnected && this.healthOkCount === 3 && !this.restMock
+            );
+          },
+
+          get wsStatusLabel() {
+            if (this.wsConnected) return "WS Live";
+            if (this.wsMock) return "WS Mock";
+            return "WS Offline";
+          },
+
+          get wsPriceSublabel() {
+            if (this.wsConnected) return "Live via Binance WS";
+            if (this.wsMock) return "Simulated ticks (WS blocked)";
+            return "Waiting for data…";
+          },
+
+          get filteredHistory() {
+            const q = this.tableSearch.trim().toLowerCase();
+            let rows = [...this.history];
+
+            if (q) {
+              rows = rows.filter((row) =>
+                this.formatTimestamp(row.timestamp).toLowerCase().includes(q),
+              );
+            }
+
+            const { key, dir } = this.tableSort;
+            rows.sort((a, b) => {
+              const av = a[key];
+              const bv = b[key];
+              if (av < bv) return dir === "asc" ? -1 : 1;
+              if (av > bv) return dir === "asc" ? 1 : -1;
+              return 0;
+            });
+
+            return rows;
+          },
+
+          get paginatedHistory() {
+            const start = (this.tablePage - 1) * this.tablePageSize;
+            return this.filteredHistory.slice(
+              start,
+              start + this.tablePageSize,
+            );
+          },
+
+          get totalPages() {
+            return Math.max(
+              1,
+              Math.ceil(this.filteredHistory.length / this.tablePageSize),
+            );
+          },
+
+          async apiGet(url) {
+            try {
+              const res = await fetch(url);
+              const json = await res.json();
+              if (!json.success) return null;
+              return json.data;
+            } catch {
+              return null;
+            }
+          },
+
+          async fetchAll() {
+            const symbols = ["BTC", "ETH", "SOL"];
+
+            const [
+              wsStatus,
+              btc,
+              eth,
+              sol,
+              agg,
+              data,
+              health,
+              history,
+              btcHist,
+              ethHist,
+              solHist,
+            ] = await Promise.all([
+              this.apiGet("/api/ws/status"),
+              this.apiGet("/api/price/BTC"),
+              this.apiGet("/api/price/ETH"),
+              this.apiGet("/api/price/SOL"),
+              this.apiGet("/api/aggregate"),
+              this.apiGet("/api/data"),
+              this.apiGet("/api/health"),
+              this.apiGet(
+                `/api/price/${this.tableSymbol}/history?duration=${this.tableDuration}`,
+              ),
+              this.apiGet("/api/price/BTC/history?duration=300"),
+              this.apiGet("/api/price/ETH/history?duration=300"),
+              this.apiGet("/api/price/SOL/history?duration=300"),
+            ]);
+
+            if (wsStatus) {
+              this.wsConnected = !!wsStatus.connected;
+              this.wsReconnectAttempts = wsStatus.reconnectAttempts ?? 0;
+            }
+
+            const priceTicks = { BTC: btc, ETH: eth, SOL: sol };
+            this.updatePricesWithAnimation(symbols, priceTicks);
+
+            if (agg) {
+              this.aggregate = {
+                BTC: agg.BTC ?? null,
+                ETH: agg.ETH ?? null,
+                SOL: agg.SOL ?? null,
+              };
+            }
+
+            if (data?.sources) {
+              this.sources = data.sources;
+              this.restMock =
+                !!data.mock ||
+                data.sources.every(
+                  (s) => s.status === "mock" || s.status === "error",
+                );
+            }
+
+            if (health) {
+              this.health = health;
+              this.networkBlocked = this.detectNetworkBlocked(health);
+            }
+
+            this.history = Array.isArray(history) ? history : [];
+            this.chartHistories = {
+              BTC: Array.isArray(btcHist) ? btcHist : [],
+              ETH: Array.isArray(ethHist) ? ethHist : [],
+              SOL: Array.isArray(solHist) ? solHist : [],
+            };
+
+            this.lastUpdated = new Date().toLocaleTimeString();
+            this.loading = false;
+            this.checkHealthToasts();
+            this.updateCharts();
+          },
+
+          updatePricesWithAnimation(symbols, priceTicks) {
+            for (const sym of symbols) {
+              const tick = priceTicks[sym];
+              if (!tick) continue;
+
+              const newPrice = tick.price;
+              const oldPrice = this.prices[sym]?.price ?? null;
+
+              if (oldPrice != null && newPrice !== oldPrice) {
+                this.prevPrices[sym] = oldPrice;
+                this.prices[sym] = tick;
+
+                if (this._priceTimers[sym])
+                  clearTimeout(this._priceTimers[sym]);
+                this._priceTimers[sym] = setTimeout(() => {
+                  this.prevPrices[sym] = this.prices[sym]?.price ?? null;
+                  this._priceTimers[sym] = null;
+                }, 1500);
+              } else {
+                this.prices[sym] = tick;
+                this.prevPrices[sym] = newPrice;
+              }
+            }
+          },
+
+          detectNetworkBlocked(health) {
+            const blockedHints = [
+              "internetpositif",
+              "certificate",
+              "altnames",
+              "ENOTFOUND",
+              "ECONNREFUSED",
+            ];
+            return Object.values(health).some((h) => {
+              const msg = (h?.error || "").toLowerCase();
+              return (
+                h?.status === "error" &&
+                blockedHints.some((hint) => msg.includes(hint))
+              );
+            });
+          },
+
+          checkHealthToasts() {
+            const labels = {
+              coingecko: "CoinGecko",
+              coincap: "CoinCap",
+              binance: "Binance",
+            };
+
+            if (this.networkBlocked) {
+              if (!this._toastedHealth._network) {
+                this._toastedHealth._network = true;
+                this.showToast(
+                  "⚠ Network memblokir API (coba VPN / ganti DNS)",
+                );
+              }
+              return;
+            }
+
+            for (const [key, name] of Object.entries(labels)) {
+              if (
+                this.health[key]?.status === "error" &&
+                !this._toastedHealth[key]
+              ) {
+                this._toastedHealth[key] = true;
+                const err = this.health[key]?.error || "unavailable";
+                this.showToast(`⚠ ${name}: ${err.slice(0, 80)}`);
+              }
+            }
+          },
+
+          showToast(message) {
+            const id = Date.now() + Math.random();
+            this.toasts.push({ id, message });
+            setTimeout(() => {
+              this.toasts = this.toasts.filter((t) => t.id !== id);
+            }, 4000);
+          },
+
+          startAutoRefresh() {
+            if (this._refreshTimer) clearInterval(this._refreshTimer);
+            if (this._countdownTimer) clearInterval(this._countdownTimer);
+
+            this._refreshTimer = setInterval(async () => {
+              await this.fetchAll();
+              this.countdown = 30;
+            }, 30000);
+
+            this.countdown = 30;
+            this._countdownTimer = setInterval(() => {
+              if (this.countdown > 0) this.countdown--;
+            }, 1000);
+          },
+
+          chartOptions() {
+            return {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  labels: { color: "#9ca3af" },
+                },
+              },
+              scales: {
+                x: {
+                  ticks: { color: "#9ca3af", maxRotation: 45, minRotation: 0 },
+                  grid: { color: "#2a2d3a" },
+                },
+                y: {
+                  ticks: { color: "#9ca3af" },
+                  grid: { color: "#2a2d3a" },
+                },
+              },
+            };
+          },
+
+          formatChartTime(ts) {
+            const d = new Date(ts);
+            return d.toTimeString().slice(0, 8);
+          },
+
+          buildLineChartSeries() {
+            const symbols = ["BTC", "ETH", "SOL"];
+            const allTs = [
+              ...new Set(
+                symbols.flatMap((sym) =>
+                  (this.chartHistories[sym] || []).map((h) => h.timestamp),
+                ),
+              ),
+            ].sort((a, b) => a - b);
+
+            const labels = allTs.map((ts) => this.formatChartTime(ts));
+            const series = {};
+
+            for (const sym of symbols) {
+              const byTs = Object.fromEntries(
+                (this.chartHistories[sym] || []).map((h) => [
+                  h.timestamp,
+                  h.price,
+                ]),
+              );
+              series[sym] = allTs.map((ts) => byTs[ts] ?? null);
+            }
+
+            return { labels, series };
+          },
+
+          initCharts() {
+            if (lineChart || barChart) return;
+
+            const lineCtx = document.getElementById("lineChart");
+            const barCtx = document.getElementById("barChart");
+            if (!lineCtx || !barCtx) return;
+
+            lineChart = new Chart(lineCtx, {
+              type: "line",
+              data: {
+                labels: [],
+                datasets: [
+                  {
+                    label: "BTC",
+                    data: [],
+                    borderColor: "#3b82f6",
+                    backgroundColor: "transparent",
+                    pointRadius: 0,
+                    tension: 0.2,
+                    spanGaps: true,
+                  },
+                  {
+                    label: "ETH",
+                    data: [],
+                    borderColor: "#8b5cf6",
+                    backgroundColor: "transparent",
+                    pointRadius: 0,
+                    tension: 0.2,
+                    spanGaps: true,
+                  },
+                  {
+                    label: "SOL",
+                    data: [],
+                    borderColor: "#22c55e",
+                    backgroundColor: "transparent",
+                    pointRadius: 0,
+                    tension: 0.2,
+                    spanGaps: true,
+                  },
+                ],
+              },
+              options: {
+                ...this.chartOptions(),
+                interaction: { mode: "index", intersect: false },
+              },
+            });
+
+            barChart = new Chart(barCtx, {
+              type: "bar",
+              data: {
+                labels: ["coingecko", "coincap", "binance"],
+                datasets: [
+                  {
+                    label: "BTC Price (USD)",
+                    data: [],
+                    backgroundColor: ["#22c55e", "#3b82f6", "#f97316"],
+                  },
+                ],
+              },
+              options: this.chartOptions(),
+            });
+          },
+
+          updateCharts() {
+            if (!lineChart || !barChart) return;
+
+            const { labels, series } = this.buildLineChartSeries();
+            lineChart.data.labels = labels;
+            lineChart.data.datasets[0].data = series.BTC;
+            lineChart.data.datasets[1].data = series.ETH;
+            lineChart.data.datasets[2].data = series.SOL;
+            lineChart.update("none");
+
+            const sourceOrder = ["coingecko", "coincap", "binance"];
+            const barData = sourceOrder.map((name) => {
+              const src = this.sources.find((s) => s.source === name);
+              const item = src?.prices?.find((p) => p.symbol === "BTC");
+              return item?.price ?? null;
+            });
+
+            barChart.data.datasets[0].data = barData;
+            barChart.update("none");
+          },
+
+          async init() {
+            await this.fetchAll();
+            setTimeout(() => {
+              this.initCharts();
+              this.updateCharts();
+            }, 100);
+            this.startAutoRefresh();
+          },
+
+          priceClass(symbol) {
+            const current = this.prices[symbol]?.price;
+            const prev = this.prevPrices[symbol];
+            if (current == null || prev == null) return "";
+            if (current > prev) return "price-up";
+            if (current < prev) return "price-down";
+            return "";
+          },
+
+          formatPrice(value) {
+            if (value == null || Number.isNaN(value)) return "—";
+            return Number(value).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            });
+          },
+
+          formatUsd(value) {
+            if (value == null || Number.isNaN(value)) return "—";
+            return (
+              "$" +
+              Number(value).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+            );
+          },
+
+          formatSpreadPct() {
+            const v = this.aggregate.BTC?.spreadPct;
+            if (v == null || Number.isNaN(v)) return "—";
+            return v.toFixed(2) + "%";
+          },
+
+          spreadValueClass() {
+            const v = this.aggregate.BTC?.spreadPct;
+            if (v == null) return "";
+            return v > 0.5 ? "value-warning" : "value-success";
+          },
+
+          sourcesHealthValueClass() {
+            const n = this.healthOkCount;
+            if (n === 3) return "value-success";
+            if (n >= 1) return "value-warning";
+            return "value-danger";
+          },
+
+          formatTimestamp(ts) {
+            return new Date(ts).toLocaleString();
+          },
+
+          toggleSort(key) {
+            if (this.tableSort.key === key) {
+              this.tableSort.dir =
+                this.tableSort.dir === "asc" ? "desc" : "asc";
+            } else {
+              this.tableSort.key = key;
+              this.tableSort.dir = "desc";
+            }
+            this.tablePage = 1;
+          },
+
+          sortIndicator(key) {
+            if (this.tableSort.key !== key) return "";
+            return this.tableSort.dir === "asc" ? "↑" : "↓";
+          },
+
+          exportCSV() {
+            const rows = this.filteredHistory;
+            if (rows.length === 0) return;
+
+            const header = "timestamp,price,symbol\n";
+            const body = rows
+              .map(
+                (r) =>
+                  `${new Date(r.timestamp).toISOString()},${r.price},${this.tableSymbol}`,
+              )
+              .join("\n");
+
+            const blob = new Blob([header + body], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${this.tableSymbol}-history.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          },
+        };
+      }
+    </script>
+  </body>
+</html>
